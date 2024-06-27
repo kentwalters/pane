@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Draw, Drag, and Remove Box Example</title>
+    <style>
+      .box {
+        position: absolute;
+        border: 1px solid black;
+        background-color: rgba(0, 0, 0, 0.1);
+        cursor: move;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        let startX,
+          startY,
+          currentBox,
+          isDrawing = false,
+          isDragging = false,
+          offsetX,
+          offsetY;
+
+        document.addEventListener("mousedown", function (e) {
+          const target = e.target;
+          if (target.classList.contains("box")) {
+            isDragging = true;
+            currentBox = target;
+            offsetX = e.clientX - target.offsetLeft;
+            offsetY = e.clientY - target.offsetTop;
+          } else {
+            isDrawing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            currentBox = document.createElement("div");
+            currentBox.className = "box";
+            currentBox.style.left = startX + "px";
+            currentBox.style.top = startY + "px";
+            document.body.appendChild(currentBox);
+          }
+        });
+
+        document.addEventListener("mousemove", function (e) {
+          if (isDrawing) {
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+
+            currentBox.style.width = width + "px";
+            currentBox.style.height = height + "px";
+            currentBox.style.left = Math.min(startX, currentX) + "px";
+            currentBox.style.top = Math.min(startY, currentY) + "px";
+          } else if (isDragging) {
+            currentBox.style.left = e.clientX - offsetX + "px";
+            currentBox.style.top = e.clientY - offsetY + "px";
+          }
+        });
+
+        document.addEventListener("mouseup", function () {
+          isDrawing = false;
+          isDragging = false;
+          currentBox = null;
+        });
+
+        document.addEventListener("dblclick", function (e) {
+          const target = e.target;
+          if (target.classList.contains("box")) {
+            target.remove();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
