@@ -107,6 +107,7 @@
 
         function saveAction(action) {
           actionStack.push(action);
+          saveState();
         }
 
         function undoLastAction() {
@@ -118,7 +119,37 @@
           } else if (lastAction.type === "remove") {
             document.body.appendChild(lastAction.element);
           }
+
+          saveState();
         }
+
+        function saveState() {
+          const boxes = document.querySelectorAll(".box");
+          const boxData = Array.from(boxes).map((box) => ({
+            left: box.style.left,
+            top: box.style.top,
+            width: box.style.width,
+            height: box.style.height,
+          }));
+          localStorage.setItem("boxes", JSON.stringify(boxData));
+        }
+
+        function loadState() {
+          const boxData = JSON.parse(localStorage.getItem("boxes"));
+          if (boxData) {
+            boxData.forEach((data) => {
+              const box = document.createElement("div");
+              box.className = "box";
+              box.style.left = data.left;
+              box.style.top = data.top;
+              box.style.width = data.width;
+              box.style.height = data.height;
+              document.body.appendChild(box);
+            });
+          }
+        }
+
+        loadState();
 
         document.addEventListener("mousedown", function (e) {
           const target = e.target;
@@ -206,6 +237,7 @@
           isResizing = false;
           currentBox = null;
           resizeDirection = "";
+          saveState();
         });
 
         document.addEventListener("dblclick", function (e) {
@@ -213,6 +245,7 @@
           if (target.classList.contains("box")) {
             saveAction({ type: "remove", element: target });
             target.remove();
+            saveState();
           }
         });
 
