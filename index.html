@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Draw, Drag, and Remove Box Example</title>
+    <title>Draw, Drag, Resize, Remove, and Align Boxes Example</title>
     <style>
       .box {
         position: absolute;
@@ -11,30 +11,117 @@
         background-color: rgba(0, 0, 0, 0.1);
         cursor: move;
       }
+
+      .box.resize-n {
+        cursor: n-resize;
+      }
+
+      .box.resize-e {
+        cursor: e-resize;
+      }
+
+      .box.resize-s {
+        cursor: s-resize;
+      }
+
+      .box.resize-w {
+        cursor: w-resize;
+      }
+
+      .box.resize-ne {
+        cursor: ne-resize;
+      }
+
+      .box.resize-nw {
+        cursor: nw-resize;
+      }
+
+      .box.resize-se {
+        cursor: se-resize;
+      }
+
+      .box.resize-sw {
+        cursor: sw-resize;
+      }
     </style>
   </head>
   <body>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
+        const GRID_SIZE = 8;
+        const RESIZE_MARGIN = 10;
         let startX,
           startY,
           currentBox,
           isDrawing = false,
           isDragging = false,
+          isResizing = false,
+          resizeDirection = "",
           offsetX,
-          offsetY;
+          offsetY,
+          targetX,
+          targetY;
+
+        function alignToGrid(value) {
+          return Math.round(value / GRID_SIZE) * GRID_SIZE;
+        }
+
+        function getResizeDirection(e, box) {
+          const rect = box.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          let direction = "";
+
+          if (y < RESIZE_MARGIN) direction += "n";
+          else if (y > rect.height - RESIZE_MARGIN) direction += "s";
+
+          if (x < RESIZE_MARGIN) direction += "w";
+          else if (x > rect.width - RESIZE_MARGIN) direction += "e";
+
+          return direction;
+        }
+
+        function animateBox() {
+          if (currentBox && isDragging) {
+            const boxRect = currentBox.getBoundingClientRect();
+            const currentX = boxRect.left;
+            const currentY = boxRect.top;
+
+            const dx = targetX - currentX;
+            const dy = targetY - currentY;
+
+            if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+              currentBox.style.left = `${targetX}px`;
+              currentBox.style.top = `${targetY}px`;
+              return;
+            }
+
+            currentBox.style.left = `${currentX + dx * 0.1}px`;
+            currentBox.style.top = `${currentY + dy * 0.1}px`;
+
+            requestAnimationFrame(animateBox);
+          }
+        }
 
         document.addEventListener("mousedown", function (e) {
           const target = e.target;
           if (target.classList.contains("box")) {
-            isDragging = true;
-            currentBox = target;
-            offsetX = e.clientX - target.offsetLeft;
-            offsetY = e.clientY - target.offsetTop;
+            resizeDirection = getResizeDirection(e, target);
+            if (resizeDirection) {
+              isResizing = true;
+              currentBox = target;
+              startX = e.clientX;
+              startY = e.clientY;
+            } else {
+              isDragging = true;
+              currentBox = target;
+              offsetX = e.clientX - target.offsetLeft;
+              offsetY = e.clientY - target.offsetTop;
+            }
           } else {
             isDrawing = true;
-            startX = e.clientX;
-            startY = e.clientY;
+            startX = alignToGrid(e.clientX);
+            startY = alignToGrid(e.clientY);
 
             currentBox = document.createElement("div");
             currentBox.className = "box";
@@ -46,8 +133,8 @@
 
         document.addEventListener("mousemove", function (e) {
           if (isDrawing) {
-            const currentX = e.clientX;
-            const currentY = e.clientY;
+            const currentX = alignToGrid(e.clientX);
+            const currentY = alignToGrid(e.clientY);
 
             const width = Math.abs(currentX - startX);
             const height = Math.abs(currentY - startY);
@@ -57,21 +144,64 @@
             currentBox.style.left = Math.min(startX, currentX) + "px";
             currentBox.style.top = Math.min(startY, currentY) + "px";
           } else if (isDragging) {
-            currentBox.style.left = e.clientX - offsetX + "px";
-            currentBox.style.top = e.clientY - offsetY + "px";
+            targetX = alignToGrid(e.clientX - offsetX);
+            targetY = alignToGrid(e.clientY - offsetY);
+            requestAnimationFrame(animateBox);
+          } else if (isResizing) {
+            const currentX = e.clientX;
+            const currentY = e.clientY;
+            const rect = currentBox.getBoundingClientRect();
+
+            if (resizeDirection.includes("n")) {
+              const newHeight = rect.bottom - currentY;
+              if (newHeight > 0) {
+                currentBox.style.top = currentY + "px";
+                currentBox.style.height = newHeight + "px";
+              }
+            }
+            if (resizeDirection.includes("s")) {
+              const newHeight = currentY - rect.top;
+              if (newHeight > 0) {
+                currentBox.style.height = newHeight + "px";
+              }
+            }
+            if (resizeDirection.includes("w")) {
+              const newWidth = rect.right - currentX;
+              if (newWidth > 0) {
+                currentBox.style.left = currentX + "px";
+                currentBox.style.width = newWidth + "px";
+              }
+            }
+            if (resizeDirection.includes("e")) {
+              const newWidth = currentX - rect.left;
+              if (newWidth > 0) {
+                currentBox.style.width = newWidth + "px";
+              }
+            }
           }
         });
 
         document.addEventListener("mouseup", function () {
           isDrawing = false;
           isDragging = false;
+          isResizing = false;
           currentBox = null;
+          resizeDirection = "";
         });
 
         document.addEventListener("dblclick", function (e) {
           const target = e.target;
           if (target.classList.contains("box")) {
             target.remove();
+          }
+        });
+
+        document.addEventListener("mouseover", function (e) {
+          const target = e.target;
+          if (target.classList.contains("box")) {
+            const direction = getResizeDirection(e, target);
+            target.className =
+              "box " + (direction ? "resize-" + direction : "");
           }
         });
       });
